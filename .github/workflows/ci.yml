@@ -19,6 +19,6 @@ jobs:
       - run: curl -O https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv
       - name: Run Python script
         run: |
-           python s24628.py
+           python main.py
       - name: Display log
         run: cat log.txt
