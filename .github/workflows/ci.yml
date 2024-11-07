@@ -1,0 +1,24 @@
+# .github/workflows/ci.yml
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-code:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - run: curl -O https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv
+      - name: Run Python script
+        run: |
+           python s24628.py
+      - name: Display log
+        run: cat log.txt
