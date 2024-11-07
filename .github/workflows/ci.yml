@@ -16,6 +16,7 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.x'
+      - run: pip install -r requirements.txt
       - run: curl -O https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv
       - name: Run Python script
         run: |
