@@ -1,101 +1,59 @@
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-import warnings
-import logging
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
 
-warnings.filterwarnings("ignore")
+data = pd.read_csv("CollegeDistance.csv")
 
-logging.basicConfig(filename="log.txt", level=logging.INFO, format="%(asctime)s - %(message)s")
-logging.info("Script started.")
+correlation_matrix = data.corr(numeric_only=True)
+data['score_category'] = pd.cut(data['score'], bins=[0, 40, 60, 100], labels=["niski", "średni", "wysoki"])
 
-try:
-    data = pd.read_csv("CollegeDistance.csv")
-    logging.info("Data loaded successfully.")
-except FileNotFoundError:
-    logging.error("Data file not found.")
-    raise
+numeric_features = ["unemp", "wage", "distance", "tuition", "education"]
+categorical_features = ["gender", "ethnicity", "fcollege", "mcollege", "home", "urban", "income", "region"]
 
-logging.info("Dataset information and statistical summary:")
-logging.info(data.info())
-logging.info(data.describe())
+numeric_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="median"))
+])
 
-numeric_data = data.select_dtypes(include=[np.number])
-plt.figure(figsize=(10, 8))
-sns.heatmap(numeric_data.corr(), annot=True, cmap="coolwarm")
-plt.title("Correlation Matrix (Numeric Columns Only)")
-plt.show()
-logging.info("Correlation matrix plotted.")
+categorical_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("encoder", OneHotEncoder(handle_unknown="ignore"))
+])
 
-data['score_category'] = pd.qcut(data['score'], 5, labels=['very low', 'low', 'medium', 'high', 'very high'])
-logging.info("Score categories created based on quintiles.")
-logging.info("Distribution of score categories:\n%s", data['score_category'].value_counts())
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", numeric_transformer, numeric_features),
+        ("cat", categorical_transformer, categorical_features)
+    ])
 
-data = pd.get_dummies(data, columns=['gender', 'ethnicity', 'fcollege', 'mcollege', 'home', 'urban', 'income', 'region'], drop_first=True)
-logging.info("Categorical variables encoded using one-hot encoding.")
+pipeline = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("classifier", RandomForestClassifier(random_state=42))
+])
 
-X = data.drop(columns=['rownames', 'score', 'score_category', 'education'])
-y = data['score_category']
+X = data.drop(columns=["score", "score_category"])
+y = data["score_category"]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-logging.info("Data split into training and test sets.")
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
-logging.info("Feature scaling applied to training and test sets.")
+from sklearn.model_selection import GridSearchCV
 
-model = RandomForestClassifier(max_depth=10, min_samples_split=10, n_estimators=150)
-model.fit(X_train, y_train)
-logging.info("Random Forest model trained.")
+param_grid = {
+    "classifier__n_estimators": [100, 200],
+    "classifier__max_depth": [None, 10, 20],
+    "classifier__min_samples_split": [2, 5, 10]
+}
 
-y_pred = model.predict(X_test)
-logging.info("Model predictions completed.")
+grid_search = GridSearchCV(pipeline, param_grid, cv=5, scoring='accuracy')
+grid_search.fit(X_train, y_train)
 
-accuracy = accuracy_score(y_test, y_pred)
-conf_matrix = confusion_matrix(y_test, y_pred)
-class_report = classification_report(y_test, y_pred)
+print("Best parameters:", grid_search.best_params_)
+print("Best cross-validation score:", grid_search.best_score_)
 
-logging.info("Model Accuracy: %s", accuracy)
-logging.info("Confusion Matrix:\n%s", conf_matrix)
-logging.info("Classification Report:\n%s", class_report)
-
-importances = model.feature_importances_
-feature_names = X.columns
-feature_importances = pd.DataFrame({'feature': feature_names, 'importance': importances}).sort_values(by='importance', ascending=False)
-
-plt.figure(figsize=(10, 6))
-sns.barplot(x=feature_importances['importance'], y=feature_importances['feature'], palette="viridis")
-plt.title("Feature Importance in Random Forest Model")
-plt.show()
-logging.info("Feature importance plot generated.")
-
-# Comparison of actual vs predicted values
-results = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
-actual_counts = results['Actual'].value_counts().sort_index()
-predicted_counts = results['Predicted'].value_counts().sort_index()
-comparison_df = pd.DataFrame({'Actual': actual_counts, 'Predicted': predicted_counts})
-
-comparison_df.plot(kind='bar', figsize=(10, 6))
-plt.title("Comparison of Actual vs Predicted Categories")
-plt.xlabel("Score Category")
-plt.ylabel("Frequency")
-plt.xticks(rotation=0)
-plt.legend(title="Legend")
-plt.show()
-logging.info("Comparison of actual vs predicted categories plotted.")
-
-plt.figure(figsize=(8, 6))
-sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=model.classes_, yticklabels=model.classes_)
-plt.title("Confusion Matrix of Predicted vs Actual")
-plt.xlabel("Predicted Labels")
-plt.ylabel("True Labels")
-plt.show()
-logging.info("Confusion matrix heatmap generated.")
-
-logging.info("Script completed.")
+best_model = grid_search.best_estimator_
+y_pred = best_model.predict(X_test)
+print(classification_report(y_test, y_pred))
