@@ -1,5 +1,16 @@
 # Documentation
 
+## Correctness of predicted results
+```
+                precision    recall  f1-score   support
+
+       niski       0.70      0.71      0.71       452
+      wysoki       0.73      0.73      0.73       496
+
+    accuracy                            0.72       948
+    macro avg       0.72      0.72      0.72       948
+ weighted avg       0.72      0.72      0.72       948
+```
 ## Correlation Matrix 
 
 <img width="485" alt="Zrzut ekranu 2024-11-7 o 21 45 53" src="https://github.com/user-attachments/assets/d417d2f1-d97a-4ec3-b298-1796d96994a6">
@@ -24,7 +35,7 @@ allowing for an assessment of how well the model’s predictions align with the 
 
 ## Confusion Matrix of Predicted vs Actual
 
-<img width="567" alt="Zrzut ekranu 2024-11-7 o 21 46 16" src="https://github.com/user-attachments/assets/11a04bdc-bd63-42aa-98bb-cf8c90fd4c19">
+<img width="670" alt="Zrzut ekranu 2024-11-10 o 20 19 56" src="https://github.com/user-attachments/assets/ad045e89-b191-42f2-be46-feb1e490578a">
 
 The plot is a confusion matrix, showing the performance of a model in classifying data into five categories: very low, low, medium, high, and very high. 
 The rows represent the true labels, while the columns represent the predicted labels. 
